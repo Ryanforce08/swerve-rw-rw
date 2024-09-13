@@ -3,8 +3,13 @@ from constants import *
 import math
 import navx
 from wpilib import SmartDashboard
-from wpimath.kinematics import SwerveDrive4Kinematics, SwerveDrive4Odometry, SwerveModulePosition
+from wpimath.kinematics import (
+    SwerveDrive4Kinematics,
+    SwerveDrive4Odometry,
+    SwerveModulePosition,
+)
 from wpimath.geometry import Translation2d, Pose2d, Rotation2d
+
 
 class SwerveDrive:
     front_left: SwerveWheel
@@ -31,27 +36,38 @@ class SwerveDrive:
         self.front_right_pose = Translation2d(0.381, -0.381)
         self.rear_left_pose = Translation2d(-0.381, 0.381)
         self.rear_right_pose = Translation2d(-0.381, -0.381)
-        self.kinematics = SwerveDrive4Kinematics(self.front_left_pose, self.front_right_pose, self.rear_left_pose, self.rear_right_pose)
+        self.kinematics = SwerveDrive4Kinematics(
+            self.front_left_pose,
+            self.front_right_pose,
+            self.rear_left_pose,
+            self.rear_right_pose,
+        )
 
         # Odometry
-        self.odometry = SwerveDrive4Odometry(self.kinematics, Rotation2d(math.radians(self.getPitch())), 
-                                             (SwerveModulePosition(self.front_left.getDirectionMotorPos()), 
-                                              SwerveModulePosition(self.front_right.getDirectionMotorPos()), 
-                                              SwerveModulePosition(self.rear_left.getDirectionMotorPos()), 
-                                              SwerveModulePosition(self.rear_right.getDirectionMotorPos())),
-                                            Pose2d(x=0, y=0, angle=0))
-    
+        self.odometry = SwerveDrive4Odometry(
+            self.kinematics,
+            Rotation2d(math.radians(self.getPitch())),
+            (
+                SwerveModulePosition(self.front_left.getDirectionMotorPos()),
+                SwerveModulePosition(self.front_right.getDirectionMotorPos()),
+                SwerveModulePosition(self.rear_left.getDirectionMotorPos()),
+                SwerveModulePosition(self.rear_right.getDirectionMotorPos()),
+            ),
+            Pose2d(x=0, y=0, angle=0),
+        )
+
     """
     CONTROL METHODS
 
     These essentially set up variables and info before execute is ran (like updating translationX from 0 -> 1)
     """
+
     def setTranslationX(self, translationX: float) -> None:
         self.translationX = translationX
 
     def setTranslationY(self, translationY: float) -> None:
         self.translationY = translationY
-    
+
     def setRotationX(self, rotationX: float) -> None:
         self.rotationX = rotationX
 
@@ -71,17 +87,21 @@ class SwerveDrive:
     INFO STUFF(?)
     yeah idk tbh
     """
+
     def updateOdometry(self) -> None:
-        self.odometry.update(Rotation2d(math.radians(self.navX_sim.getDouble("Pitch").get())),
-                            SwerveModulePosition(self.front_left.getDirectionMotorPos()), 
-                            SwerveModulePosition(self.front_right.getDirectionMotorPos()), 
-                            SwerveModulePosition(self.rear_left.getDirectionMotorPos()), 
-                            SwerveModulePosition(self.rear_right.getDirectionMotorPos()))
+        self.odometry.update(
+            Rotation2d(math.radians(self.navX_sim.getDouble("Pitch").get())),
+            SwerveModulePosition(self.front_left.getDirectionMotorPos()),
+            SwerveModulePosition(self.front_right.getDirectionMotorPos()),
+            SwerveModulePosition(self.rear_left.getDirectionMotorPos()),
+            SwerveModulePosition(self.rear_right.getDirectionMotorPos()),
+        )
 
     """
     EXECUTE
     This is ran every "tick" of the robot. This is where we update all the wheels speed and direction.
     """
+
     def execute(self) -> None:
         SmartDashboard.putNumber("speedMultiplier", self.speedMultiplier)
 
@@ -105,35 +125,41 @@ class SwerveDrive:
         rotationX *= self.rotationMultiplier
 
         # Field Orientaated Drive (aka complicated math so the robot doesn't rotate while we translate or somthin idrk)
-        temp = translationY * math.cos(self.navX.getYaw() * (math.pi / 180)) + translationX * math.sin(self.navX.getYaw() * (math.pi / 180))
-        translationX = -translationY * math.sin(self.navX.getYaw() * (math.pi / 180)) + translationX * math.cos(self.navX.getYaw() * (math.pi / 180))
+        temp = translationY * math.cos(
+            self.navX.getYaw() * (math.pi / 180)
+        ) + translationX * math.sin(self.navX.getYaw() * (math.pi / 180))
+        translationX = -translationY * math.sin(
+            self.navX.getYaw() * (math.pi / 180)
+        ) + translationX * math.cos(self.navX.getYaw() * (math.pi / 180))
         translationY = temp
 
-        # FOR FUTURE ROBOTICS PEOPLE: These usually would require the self.rotationX to be multiplied by (robotLength or robotWidth / 2). 
+        # FOR FUTURE ROBOTICS PEOPLE: These usually would require the self.rotationX to be multiplied by (robotLength or robotWidth / 2).
         # However, since Larry is a square, we don't use this. I'm leaving the code there just in case someone reads this and uses it.
         robotLength = 1
         robotWidth = 1
 
-        a = translationX - rotationX #* (robotLength / 2) 
-        b = translationX + rotationX #* (robotLength / 2)
-        c = translationY - rotationX #* (robotWidth / 2)
-        d = translationY + rotationX #* (robotWidth / 2)
+        a = translationX - rotationX  # * (robotLength / 2)
+        b = translationX + rotationX  # * (robotLength / 2)
+        c = translationY - rotationX  # * (robotWidth / 2)
+        d = translationY + rotationX  # * (robotWidth / 2)
 
         # Wheel 1 = topRight, Wheel 2 = topLeft, Wheel 3 = bottomLeft, Wheel 4 = bottomRight
         # wheel = [speed, angle]
-        topRight = [math.sqrt(b ** 2 + c ** 2), math.atan2(b, c) * (180/math.pi) + 180]
-        topLeft = [math.sqrt(b ** 2 + d ** 2), math.atan2(b, d) * (180/math.pi) + 180]
-        bottomLeft = [math.sqrt(a ** 2 + d ** 2), math.atan2(a, d) * (180/math.pi) + 180]
-        bottomRight = [math.sqrt(a ** 2 + c ** 2), math.atan2(a, c) * (180/math.pi) + 180]
+        topRight = [math.sqrt(b**2 + c**2), math.atan2(b, c) * (180 / math.pi) + 180]
+        topLeft = [math.sqrt(b**2 + d**2), math.atan2(b, d) * (180 / math.pi) + 180]
+        bottomLeft = [math.sqrt(a**2 + d**2), math.atan2(a, d) * (180 / math.pi) + 180]
+        bottomRight = [math.sqrt(a**2 + c**2), math.atan2(a, c) * (180 / math.pi) + 180]
 
         # Check if any wheels have a speed higher than 1. If so, divide all wheels by highest value
-        highestSpeed = max(abs(topRight[0]), abs(topLeft[0]), abs(bottomLeft[0]), abs(bottomRight[0]))
+        highestSpeed = max(
+            abs(topRight[0]), abs(topLeft[0]), abs(bottomLeft[0]), abs(bottomRight[0])
+        )
         if highestSpeed > 1:
             topRight[0] /= highestSpeed
             topLeft[0] /= highestSpeed
             bottomLeft[0] /= highestSpeed
             bottomRight[0] /= highestSpeed
-        
+
         # Speed modifiers
         topRight[0] *= self.speedMultiplier
         topLeft[0] *= self.speedMultiplier
@@ -143,7 +169,7 @@ class SwerveDrive:
         # Turn wheels :D
         self.front_left.setDesiredSpeed(topLeft[0])
         self.front_left.setDesiredAngle(topLeft[1])
-        
+
         self.front_right.setDesiredSpeed(topRight[0])
         self.front_right.setDesiredAngle(topRight[1])
 

@@ -17,12 +17,14 @@ class SwerveWheel:
         """
         
         
-        steer_talonfx_configs = configs.TalonFXConfiguration()
-        drive_talonfx_configs = configs.TalonFXConfiguration()
+        direction_talonfx_configs = configs.TalonFXConfiguration()
+        speed_talonfx_configs = configs.TalonFXConfiguration()
 
-        
+        speed_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
+        speed_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
+
         # set slot 0 gains
-        slot0_configs = steer_talonfx_configs.slot0
+        slot0_configs = direction_talonfx_configs.slot0
         slot0_configs.k_s = 0.25 # Add 0.25 V output to overcome static friction
         slot0_configs.k_v = 0.12 # A velocity target of 1 rps results in 0.12 V output
         slot0_configs.k_a = 0.01 # An acceleration of 1 rps/s requires 0.01 V output
@@ -31,15 +33,15 @@ class SwerveWheel:
         slot0_configs.k_d = 0.1 # A velocity error of 1 rps results in 0.1 V output
 
         # set Motion Magic settings
-        steer_motion_magic_configs = steer_talonfx_configs.motion_magic
-        steer_motion_magic_configs.motion_magic_cruise_velocity = 80 # Target cruise velocity of 80 rps
-        steer_motion_magic_configs.motion_magic_acceleration = 160 # Target acceleration of 160 rps/s (0.5 seconds)
-        steer_motion_magic_configs.motion_magic_jerk = 1600 # Target jerk of 1600 rps/s/s (0.1 seconds)
+        direction_motion_magic_configs = direction_talonfx_configs.motion_magic
+        direction_motion_magic_configs.motion_magic_cruise_velocity = 80 # Target cruise velocity of 80 rps
+        direction_motion_magic_configs.motion_magic_acceleration = 160 # Target acceleration of 160 rps/s (0.5 seconds)
+        direction_motion_magic_configs.motion_magic_jerk = 1600 # Target jerk of 1600 rps/s/s (0.1 seconds)
 
-        self.speed_motor.configurator.apply(steer_talonfx_configs)
+        self.speed_motor.configurator.apply(direction_talonfx_configs)
 
         # set slot 1 gains
-        slot1_configs = drive_talonfx_configs.slot0
+        slot1_configs = speed_talonfx_configs.slot0
         slot1_configs.k_s = 0.25 # Add 0.25 V output to overcome static friction
         slot1_configs.k_v = 0.12 # A velocity target of 1 rps results in 0.12 V output
         slot1_configs.k_a = 0.01 # An acceleration of 1 rps/s requires 0.01 V output
@@ -48,16 +50,15 @@ class SwerveWheel:
         slot1_configs.k_d = 0.1 # A velocity error of 1 rps results in 0.1 V output
 
         # set Motion Magic settings
-        drive_motion_magic_configs = drive_talonfx_configs.motion_magic
-        drive_motion_magic_configs.motion_magic_cruise_velocity = 80 # Target cruise velocity of 80 rps
-        drive_motion_magic_configs.motion_magic_acceleration = 160 # Target acceleration of 160 rps/s (0.5 seconds)
-        drive_motion_magic_configs.motion_magic_jerk = 1600 # Target jerk of 1600 rps/s/s (0.1 seconds)
+        speed_motion_magic_configs = speed_talonfx_configs.motion_magic
+        speed_motion_magic_configs.motion_magic_cruise_velocity = 80 # Target cruise velocity of 80 rps
+        speed_motion_magic_configs.motion_magic_acceleration = 160 # Target acceleration of 160 rps/s (0.5 seconds)
+        speed_motion_magic_configs.motion_magic_jerk = 1600 # Target jerk of 1600 rps/s/s (0.1 seconds)
 
 
-        self.direction_motor.configurator.apply(drive_talonfx_configs)
+        self.direction_motor.configurator.apply(speed_talonfx_configs)
                 
-        drive_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
-        drive_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
+
 
         
         
