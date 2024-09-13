@@ -1,11 +1,10 @@
 from constants import *
-from phoenix6.hardware import CANcoder,FeedbackDevice, NeutralMode, TalonFX, TalonFXControlMode
-from phoenix6 import  CANCoderSimCollection, SensorInitializationStrategy
+from phoenix6.hardware import CANcoder,TalonFX
 from math import fabs
 import wpilib
-from wpimath.system.plant import DCMotor
-from phoenix6.configs.talon_fx_configs import TalonFXConfiguration
 from phoenix6.signals import NeutralModeValue
+
+from phoenix6 import configs
 
 class SwerveWheel:
     speed_motor: TalonFX
@@ -16,51 +15,55 @@ class SwerveWheel:
         """
         This function is automatically called after the motors and encoders have been injected.
         """
-        self.config= TalonFXConfiguration()
-        self.config.motor_output.neutral_mode = NeutralModeValue.BRAKE
         
-        self.direction_motor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, 0, ktimeoutMs)
+        
+        steer_talonfx_configs = configs.TalonFXConfiguration()
+        drive_talonfx_configs = configs.TalonFXConfiguration()
+
+        
+        # set slot 0 gains
+        slot0_configs = steer_talonfx_configs.slot0
+        slot0_configs.k_s = 0.25 # Add 0.25 V output to overcome static friction
+        slot0_configs.k_v = 0.12 # A velocity target of 1 rps results in 0.12 V output
+        slot0_configs.k_a = 0.01 # An acceleration of 1 rps/s requires 0.01 V output
+        slot0_configs.k_p = 4.8 # A position error of 2.5 rotations results in 12 V output
+        slot0_configs.k_i = 0 # no output for integrated error
+        slot0_configs.k_d = 0.1 # A velocity error of 1 rps results in 0.1 V output
+
+        # set Motion Magic settings
+        steer_motion_magic_configs = steer_talonfx_configs.motion_magic
+        steer_motion_magic_configs.motion_magic_cruise_velocity = 80 # Target cruise velocity of 80 rps
+        steer_motion_magic_configs.motion_magic_acceleration = 160 # Target acceleration of 160 rps/s (0.5 seconds)
+        steer_motion_magic_configs.motion_magic_jerk = 1600 # Target jerk of 1600 rps/s/s (0.1 seconds)
+
+        self.speed_motor.configurator.apply(steer_talonfx_configs)
+
+        # set slot 1 gains
+        slot1_configs = drive_talonfx_configs.slot0
+        slot1_configs.k_s = 0.25 # Add 0.25 V output to overcome static friction
+        slot1_configs.k_v = 0.12 # A velocity target of 1 rps results in 0.12 V output
+        slot1_configs.k_a = 0.01 # An acceleration of 1 rps/s requires 0.01 V output
+        slot1_configs.k_p = 4.8 # A position error of 2.5 rotations results in 12 V output
+        slot1_configs.k_i = 0 # no output for integrated error
+        slot1_configs.k_d = 0.1 # A velocity error of 1 rps results in 0.1 V output
+
+        # set Motion Magic settings
+        drive_motion_magic_configs = drive_talonfx_configs.motion_magic
+        drive_motion_magic_configs.motion_magic_cruise_velocity = 80 # Target cruise velocity of 80 rps
+        drive_motion_magic_configs.motion_magic_acceleration = 160 # Target acceleration of 160 rps/s (0.5 seconds)
+        drive_motion_magic_configs.motion_magic_jerk = 1600 # Target jerk of 1600 rps/s/s (0.1 seconds)
+
+
+        self.direction_motor.configurator.apply(drive_talonfx_configs)
+                
+        drive_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
+        drive_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
+
+        
+        
+        self.direction_motor.configurator.
         self.speed_motor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, 0, ktimeoutMs)
 
-        self.direction_motor.config_kF(0, kF, ktimeoutMs)
-        self.speed_motor.config_kF(0, kF, ktimeoutMs)
-
-        self.direction_motor.config_kP(0, kP, ktimeoutMs)
-        self.speed_motor.config_kP(0, kP, ktimeoutMs)
-
-        self.direction_motor.config_kI(0, kI, ktimeoutMs)
-        self.speed_motor.config_kI(0, kI, ktimeoutMs)
-
-        self.direction_motor.config_kD(0, kD, ktimeoutMs)
-        self.speed_motor.config_kD(0, kD, ktimeoutMs)
-
-        self.direction_motor.config_IntegralZone(0, kIzone, ktimeoutMs)
-        self.speed_motor.config_IntegralZone(0, kIzone, ktimeoutMs)
-
-        self.direction_motor.configNominalOutputForward(0, ktimeoutMs)
-        self.speed_motor.configNominalOutputForward(0, ktimeoutMs)
-
-        self.direction_motor.configNominalOutputReverse(0, ktimeoutMs)
-        self.speed_motor.configNominalOutputReverse(0, ktimeoutMs)
-
-        self.direction_motor.configPeakOutputForward(1, ktimeoutMs)
-        self.speed_motor.configPeakOutputForward(1, ktimeoutMs)
-
-        self.direction_motor.configPeakOutputReverse(-1, ktimeoutMs)
-        self.speed_motor.configPeakOutputReverse(-1, ktimeoutMs)
-
-        self.direction_motor.selectProfileSlot(kSlotIdx, kPIDLoopIdx)
-        self.speed_motor.selectProfileSlot(kSlotIdx, kPIDLoopIdx)
-
-        self.direction_motor.configMotionCruiseVelocity(kcruiseVel, ktimeoutMs)
-        self.speed_motor.configMotionCruiseVelocity(kcruiseVel, ktimeoutMs)
-
-        self.direction_motor.configMotionAcceleration(kcruiseAccel, ktimeoutMs)
-        self.speed_motor.configMotionAcceleration(kcruiseAccel, ktimeoutMs)
-
-        #self.direction_motor.setNeutralMode(NeutralMode.Brake)
-        #self.speed_motor.setNeutralMode(NeutralMode.Brake)
-        self.config.motor_output.neutral_mode = NeutralModeValue.BRAKE
 
         self.direction_motor.setSelectedSensorPosition(0.0, kPIDLoopIdx, ktimeoutMs)
         self.speed_motor.setSelectedSensorPosition(0.0, kPIDLoopIdx, ktimeoutMs)
@@ -160,9 +163,9 @@ class SwerveWheel:
         self.directionTargetAngle = targetAngle
 
         if kDebug:
-            wpilib.SmartDashboard.putNumber(str(self.speed_motor.getDeviceID()) + " dirTargetAngle", self.directionTargetAngle)
-            wpilib.SmartDashboard.putNumber(str(self.speed_motor.getDeviceID()) + " dirTargetPos", self.directionTargetPos)
-            wpilib.SmartDashboard.putBoolean(str(self.speed_motor.getDeviceID()) + " Inverted?", self.isInverted)
+            wpilib.SmartDashboard.putNumber(str(self.speed_motor.device_id()) + " dirTargetAngle", self.directionTargetAngle)
+            wpilib.SmartDashboard.putNumber(str(self.speed_motor.device_id()) + " dirTargetPos", self.directionTargetPos)
+            wpilib.SmartDashboard.putBoolean(str(self.speed_motor.device_id()) + " Inverted?", self.isInverted)
 
         # Now we can actually turn the motor after like 60 lines lmao
         self.direction_motor.set(TalonFXControlMode.MotionMagic, self.directionTargetPos * ksteeringGearRatio)
