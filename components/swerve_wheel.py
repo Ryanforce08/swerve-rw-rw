@@ -4,7 +4,7 @@ from math import fabs
 import wpilib
 from phoenix6.signals import NeutralModeValue,FeedbackSensorSourceValue
 
-from phoenix6 import configs
+from phoenix6 import configs,controls
 
 
 class SwerveWheel:
@@ -19,6 +19,7 @@ class SwerveWheel:
 
         self.direction_talonfx_configs = configs.TalonFXConfiguration()
         self.speed_talonfx_configs = configs.TalonFXConfiguration()
+       
 
         self.direction_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
         self.speed_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
@@ -57,17 +58,17 @@ class SwerveWheel:
         slot1_configs.k_i = 0  # no output for integrated error
         slot1_configs.k_d = 0.1  # A velocity error of 1 rps results in 0.1 V output
 
-        # set Motion Magic settings
+        # set Motion Magic Expo settings
+        direction_motion_magic_configs = self.direction_talonfx_configs.motion_magic
+        direction_motion_magic_configs.motion_magic_cruise_velocity = 0 # Unlimited cruise velocity
+        direction_motion_magic_configs.motion_magic_expo_k_v = 0.12 # kV is around 0.12 V/rps
+        direction_motion_magic_configs.motion_magic_expo_k_a = 0.1 # Use a slower kA of 0.1 V/(rps/s)
+
         speed_motion_magic_configs = self.speed_talonfx_configs.motion_magic
-        speed_motion_magic_configs.motion_magic_cruise_velocity = (
-            80  # Target cruise velocity of 80 rps
-        )
-        speed_motion_magic_configs.motion_magic_acceleration = (
-            160  # Target acceleration of 160 rps/s (0.5 seconds)
-        )
-        speed_motion_magic_configs.motion_magic_jerk = (
-            1600  # Target jerk of 1600 rps/s/s (0.1 seconds)
-        )
+        speed_motion_magic_configs.motion_magic_cruise_velocity = 0 # Unlimited cruise velocity
+        speed_motion_magic_configs.motion_magic_expo_k_v = 0.12 # kV is around 0.12 V/rps
+        speed_motion_magic_configs.motion_magic_expo_k_a = 0.1 # Use a slower kA of 0.1 V/(rps/s)
+
 
        # self.direction_motor.configSelectedFeedbackSensor(
        #     FeedbackDevice.IntegratedSensor, 0, ktimeoutMs
@@ -102,6 +103,8 @@ class SwerveWheel:
         self.desiredAngle = 0
         self.desiredSpeed = 0
         self.stopped = False
+        # create a Motion Magic Expo request, voltage output
+        self.request = controls.MotionMagicExpoVoltage(0)
 
     """
     CONTROL METHODS
@@ -121,7 +124,8 @@ class SwerveWheel:
         #self.speed_motor.set(TalonFXControlMode.PercentOutput, 0)
         #self.direction_motor.set(TalonFXControlMode.PercentOutput, 0)
         #self.direction_motor.setNeutralMode(NeutralMode.Coast)
-
+        self.speed_motor.set_control(self.request.with_position(0))
+        self.direction_motor.set_control(self.request.with_position(0))
         self.direction_talonfx_configs.motor_output.neutral_mode = NeutralModeValue.COAST
 
 
@@ -225,7 +229,7 @@ class SwerveWheel:
             slowdownMult = 1
 
         self.speed_motor.set(
-            TalonFXControlMode.PercentOutput,
+            self.speed_motor.set_control(self.request.with_position()),
             max(-1, min(1, self.desiredSpeed * slowdownMult)),
         )
 
